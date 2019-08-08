@@ -1,22 +1,49 @@
-import socket
 import subprocess
 import os
+import socket
+from _thread import start_new_thread
+import threading
 
-socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-socket.bind(('localhost',9998))
-socket.listen(1)
-client,addr = socket.accept()
-i=1
-file = 'file'+str(i)+'.c'
-i+=1
-f = open(file,'wb')
-l = client.recv(1024)
-f.write(l)
-f.close()
-subprocess.call(['gcc',file])
-exec_file = open('a.out','rb')
-read_bytes = exec_file.read(1024)
-while(read_bytes):
-    client.send(read_bytes)
-    read_bytes = exec_file.read(1024)
-socket.close()
+def threaded(c, addr):
+	while True:
+		data = c.recv(1024)
+
+		output=subprocess.Popen(['arp', addr],stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+		stdout,stderr = output.communicate()
+		prt = str(stdout)
+		print(prt)
+
+		if not data:
+			print('Bye')
+
+			break
+
+		data = data[::-1]
+
+		c.send(prt.encode('ascii'))
+	c.close()
+
+
+def Main():
+	host = ""
+
+	port = 12335
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.bind((host, port))
+	print("socket binded to post", port)
+
+	s.listen(5)
+	print("socket is listening")
+
+	while True:
+
+		c, addr = s.accept()
+
+		print('Connected to :', addr[0], ':', addr[1])
+
+		start_new_thread(threaded, (c,addr[0]),)
+	s.close()
+
+
+if __name__ == '__main__':
+	Main()
